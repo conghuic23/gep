@@ -128,7 +128,7 @@ def summary_bb_timing(df):
     bb_timing["count"] = bb_timing["count"].astype('int')
     print(bb_timing)
 
-    
+
 def calculate_bb_timing():
     gpu_utils = []
     df = pandas.DataFrame(bb_timing_records)
@@ -166,9 +166,9 @@ def calculate_bb_timing():
     summary_bb_timing(df[df.dur > ((2 * multiplier) / 1000)])
 
 '''
-gvt workload 0-89    [000] ....   196.196106: i915_gep_read_req: 		
+gvt workload 0-89    [000] ....   196.196106: i915_gep_read_req:
 '''
-def thread_info(line): 
+def thread_info(line):
     index = 23
     thread_info = line[:index]
     line = line[index:]
@@ -183,7 +183,7 @@ def thread_info(line):
 
     return thread_name, thread_id, float(timestamp) * 1000000, line
 
-def find_thread_id(line): 
+def find_thread_id(line):
     thread_info = line[:23]
     index = thread_info.rfind("-")
     return thread_info[index + 1 :]
@@ -204,6 +204,11 @@ def find_timestamp1(line):
 
 ftrace_lines=collections.defaultdict(list)
 
+"""
+1.change timestamp to 0 start.
+2.replace gep_log to tracing_mark_write (:B and :E)
+3.add all line to dict ftrace_lines with ts as key.
+"""
 def convert_line(line):
     global start_ftrace
     ts = int(find_timestamp1(line))
@@ -221,16 +226,16 @@ def convert_line(line):
 def convert_uos_line(line):
     global start_ftrace
     ts = int(find_timestamp1(line))
-  
+
     line = line.replace(str(ts), '%.6f' % convert_ts(ts))
-        
+
     if ' [000] ' in line:
         line = line.replace(" [000] ", " [001] ")
     elif ' [001] ' in line:
         line = line.replace(" [001] ", " [002] ")
     elif ' [002] ' in line:
         line = line.replace(" [002] ", " [003] ")
-            
+
     if ' target_cpu=000' in line:
         line = line.replace(" target_cpu=000", " target_cpu=001")
     elif ' target_cpu=001' in line:
@@ -239,9 +244,9 @@ def convert_uos_line(line):
         line = line.replace(" target_cpu=002", " target_cpu=003")
 
     if "i915_request_execute" in line:
-        i915_request_execute(line)            
+        i915_request_execute(line)
     elif "i915_request_retire" in line:
-        i915_request_retire(line)             
+        i915_request_retire(line)
     ftrace_lines[ts].append('UOS: ' + line)
     return line
 
@@ -259,7 +264,7 @@ def find_submit_time(submits, early_unwind, later_unwind):
             return t
     print('Failed to find submit time', submits, early_unwind, later_unwind)
     return 0
- 
+
 '''
 stress_wayland-452   [000] ....   221.118768: i915_gep_read_req: pid=203 vgpu_id=0 hw_ctx=3 fence.ctx=29 seqno=10492 global_seqno=23866 engine=0 prio=1024 preempted=0 cpu_time=3377d23ea6 gpu_time=fe4e0609 submit=fe48ddd1 resubmit=fe49138b start=fe48e879 end=fe4939a5
 '''
@@ -304,12 +309,12 @@ def i915_gep_read_req(fp, line):
     args["submit"] = []
 
     for i in range(len(request.submits)):
-        args["submit"].append('global_seqno=%d submit=%.3f port=%d count=%d' % 
+        args["submit"].append('global_seqno=%d submit=%.3f port=%d count=%d' %
                     (request.global_seqnos[i], (request.submits[i]/1000000 - start_timestamp) * 1000, request.ports[i], request.counts[i]))
     submit_times = request.submits  # in us
     unwind_times = request.unwinds  # in us
     submit_times.sort()
-    unwind_times.sort() 
+    unwind_times.sort()
     node["args"] = args
 
     node_ts = []                    # in us
@@ -327,7 +332,7 @@ def i915_gep_read_req(fp, line):
     record["dur"] = sum(node_dur)                   # in us
     record["start"] = gpustart                      # in cycle
     record["end"] = gpuend                          # in cycle
-    bb_timing_records.append(record)	
+    bb_timing_records.append(record)
 
 '''
 glmark2-es2-way-383   [002] ....   370.958786: i915_request_add: dev=0, engine=0:0, hw_id=6, ctx=44, seqno=17313, global=0
@@ -425,7 +430,7 @@ def i915_request_retire(line):
     args = items[5:]
     ie = instant_event("i915_request_retire", args, timestamp, thread_id, thread_id)
     ie.write_json()
-    
+
 
 '''
 weston-231   [000] ....   155.595359: drm_log: I915_GEM_BUSY
@@ -505,11 +510,19 @@ def cut_ftrace(trace_file):
         if line.strip() == '':
             continue
         if not line.startswith('#'):
-            line = convert_line(line)
-         
+            line = convert_line(line) # if not start with # go on convert, add to ftrace_lines
+
         if line == None:
             continue
-            
+
+        """
+        if the first time record, means enter:
+            1.add a new line , in it is the string from start to <timestamp>: +
+            "tracing_mark_write: trace_event_clock_sync: parent_ts=[timestamp]"
+            2 start_timestamp = timestamp
+            3 write this new line to 'cut.ftrace'
+            4.set first_record to false.
+        """
         if not line.startswith('#') and first_record:
             items = line.split()
             new_line = line[:line.find(": ") + 2] + "tracing_mark_write: trace_event_clock_sync: parent_ts=%s\n" % items[3][:-1]
@@ -519,7 +532,12 @@ def cut_ftrace(trace_file):
         if line.startswith('#'):
             cut_fp.write(line)
 
-
+    """
+    open trace_uos
+    change cpu0-2 to cpu1-3 so that to combine with sos.
+    add i915 related log to trace_event list?
+    after while, all data in trac_uos is converted.
+    """
     fp = open('trace_uos')
     while True:
         line = fp.readline()
@@ -528,12 +546,12 @@ def cut_ftrace(trace_file):
         if line.strip() == '':
             continue
         if not line.startswith('#'):
-            line = convert_uos_line(line)   
-    
-    od = collections.OrderedDict(sorted(ftrace_lines.items()))
+            line = convert_uos_line(line)    # add to ftrace_lines list
+
+    od = collections.OrderedDict(sorted(ftrace_lines.items())) # sort with timestamp.
     for k, v in od.items():
         for l in v:
-            cut_fp.write(l)
+            cut_fp.write(l)  # write to cut.trace
 
 
 def generate_zipfile(trace_file):
@@ -554,7 +572,7 @@ def init(platform):
         multiplier = 52.083
     del bb_timing_records[:]
 
-  
+
 def parse_acrntrace():
     global first_ts
     acrntrace_path = './'
