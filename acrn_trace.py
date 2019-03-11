@@ -105,7 +105,7 @@ def extract_function(cpu, guest_rip):
     return func
 
 max_ts = 0
-    
+
 def parse_cpu(trace_file):
     global vm_exit, vm_exits
     with open(trace_file) as f:
@@ -115,7 +115,7 @@ def parse_cpu(trace_file):
             cpu = int(items[0][3:])
             evid = int(items[1], 16)
             ts = int(items[2])
-            
+
             desc = line[line.find(items[2]) + len(items[2]):]
             if vm_exit[cpu] is None:
                 if 'vmexit' in desc:
@@ -145,7 +145,7 @@ def parse_ept(cpu_df, reason, csv_file):
     df = ept['delta'].describe()[['count', 'mean', 'min', 'max']]
     df['Total'] = df['count'] * df['mean']
     df.to_csv(csv_file)
-    
+
 def parse_vmexit(trace_dir):
     for i in range(cpu_num):
         trace_file = '%s/%d.txt' % (trace_dir, i)
@@ -158,16 +158,16 @@ def parse(trace_dir):
     pandas.options.display.float_format = '{:,.0f}'.format
     cpu_group = df.groupby(['cpu'])
     print(cpu_group['exit_ts'].describe()[['count', 'min', 'max']])
-    
+
     reason_group = df.groupby(['reason'])
     print(reason_group['delta'].describe()[['count', 'mean', 'min', 'max']])
-    summary_csv = 'vm_exit_summary.csv'    
+    summary_csv = 'vm_exit_summary.csv'
     pandas.DataFrame(['Total']).to_csv(summary_csv, index=False, header=False)
     reason_group['delta'].describe()[['count', 'mean', 'min', 'max']].to_csv(summary_csv, mode='a')
-    
+
     #parse_ept(df[df.cpu != 0], 'VMEXIT_EPT_VIOLATION_GVT', 'wp.csv')
     #parse_ept(df[df.cpu != 0], 'VMEXIT_EPT_VIOLATION', 'violation.csv')
-    
+
     print("Generating vm_exit.csv")
     for i in range(cpu_num):
         print("=============cpu=%d================" % i)

@@ -128,7 +128,7 @@ def summary_bb_timing(df):
     bb_timing["count"] = bb_timing["count"].astype('int')
     print(bb_timing)
 
-    
+
 def calculate_bb_timing():
     gpu_utils = []
     df = pandas.DataFrame(bb_timing_records)
@@ -166,9 +166,9 @@ def calculate_bb_timing():
     summary_bb_timing(df[df.dur > ((2 * multiplier) / 1000)])
 
 '''
-gvt workload 0-89    [000] ....   196.196106: i915_gep_read_req: 		
+gvt workload 0-89    [000] ....   196.196106: i915_gep_read_req:
 '''
-def thread_info(line): 
+def thread_info(line):
     index = 23
     thread_info = line[:index]
     line = line[index:]
@@ -220,7 +220,7 @@ def find_submit_time(submits, early_unwind, later_unwind):
             return t
     print('Failed to find submit time', submits, early_unwind, later_unwind)
     return 0
- 
+
 '''
 stress_wayland-452   [000] ....   221.118768: i915_gep_read_req: pid=203 vgpu_id=0 hw_ctx=3 fence.ctx=29 seqno=10492 global_seqno=23866 engine=0 prio=1024 preempted=0 cpu_time=3377d23ea6 gpu_time=fe4e0609 submit=fe48ddd1 resubmit=fe49138b start=fe48e879 end=fe4939a5
 '''
@@ -265,12 +265,12 @@ def i915_gep_read_req(fp, line):
     args["submit"] = []
 
     for i in range(len(request.submits)):
-        args["submit"].append('global_seqno=%d submit=%.3f port=%d count=%d' % 
+        args["submit"].append('global_seqno=%d submit=%.3f port=%d count=%d' %
                     (request.global_seqnos[i], (request.submits[i]/1000000 - start_timestamp) * 1000, request.ports[i], request.counts[i]))
     submit_times = request.submits  # in us
     unwind_times = request.unwinds  # in us
     submit_times.sort()
-    unwind_times.sort() 
+    unwind_times.sort()
     node["args"] = args
 
     node_ts = []                    # in us
@@ -288,7 +288,7 @@ def i915_gep_read_req(fp, line):
     record["dur"] = sum(node_dur)                   # in us
     record["start"] = gpustart                      # in cycle
     record["end"] = gpuend                          # in cycle
-    bb_timing_records.append(record)	
+    bb_timing_records.append(record)
 
 '''
 glmark2-es2-way-383   [002] ....   370.958786: i915_request_add: dev=0, engine=0:0, hw_id=6, ctx=44, seqno=17313, global=0
@@ -453,10 +453,10 @@ def cut_ftrace(trace_file):
             continue
         if not line.startswith('#'):
             line = convert_line(line)
-         
+
         if line == None:
             continue
-            
+
         if not line.startswith('#') and first_record:
             items = line.split()
             new_line = line[:line.find(": ") + 2] + "tracing_mark_write: trace_event_clock_sync: parent_ts=%s\n" % items[3][:-1]
@@ -505,7 +505,7 @@ def init(platform):
         multiplier = 52.083
     del bb_timing_records[:]
 
-  
+
 def parse_acrntrace():
     global first_ts
     acrntrace_path = './'
@@ -519,7 +519,6 @@ def parse_acrntrace():
     print('first ts is ' + str(first_ts))
     df['dur'] = df['delta'] * 1000000 / tsc_hz
     df['start'] = (df['exit_ts'] - first_ts) * 1000000 / tsc_hz
-    print(df)
     for index, row in df.iterrows():
         de = duration_event(row['reason'], '', '%.6f' % row['start'], row['cpu'], PID_NAMES['Acrn'])
         de.dur = '%.6f' % row['dur']

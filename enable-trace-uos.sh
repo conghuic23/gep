@@ -8,4 +8,4 @@ echo 1 > /sys/kernel/debug/tracing/events/irq/softirq_entry/enable
 echo 1 > /sys/kernel/debug/tracing/events/irq/softirq_exit/enable
 echo 1 > /sys/kernel/debug/tracing/events/workqueue/enable
 echo 1 > /sys/kernel/debug/tracing/tracing_on
-echo  > /sys/kernel/debug/tracing/trace
+echo > /sys/kernel/debug/tracing/trace
