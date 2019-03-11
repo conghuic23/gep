@@ -594,7 +594,7 @@ def parse_acrntrace():
         de.write_json()
 
 def parse(trace_file):
-    #parse_acrntrace()
+    parse_acrntrace()
     cut_ftrace(trace_file)
     #parse_trace(trace_file)
     calculate_bb_timing()
