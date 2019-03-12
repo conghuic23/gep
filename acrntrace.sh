@@ -1,5 +1,5 @@
 set -x
-SOS_IP=10.239.153.11
+SOS_IP=10.239.153.147
 adb root
 adb push enable-trace-uos.sh /data
 adb push copy-trace.sh /data
@@ -12,7 +12,7 @@ adb shell sh /data/enable-trace-uos.sh
 ssh root@${SOS_IP} "/root/acrntrace -c -i 500 -r 64" > log_trace 2>&1 &
 ssh root@$SOS_IP "/root/enable-trace.sh"
 echo "collect 5s trace..."
-sleep 5
+sleep 15
 ssh root@${SOS_IP} "echo 0 > /sys/kernel/debug/tracing/tracing_on"
 ssh root@${SOS_IP} "pkill acrntrace"
 #ssh root@${SOS_IP} "chmod +x -R /tmp/acrntrace/*"
