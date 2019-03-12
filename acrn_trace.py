@@ -109,7 +109,11 @@ max_ts = 0
 def parse_cpu(trace_file):
     global vm_exit, vm_exits
     with open(trace_file) as f:
-        next(f)
+        try:
+            next(f)
+        except:
+            print("failed to read file {}".format(trace_file))
+            return
         for line in f:
             items = line.split()
             cpu = int(items[0][3:])
