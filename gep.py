@@ -223,26 +223,22 @@ def convert_line(line):
     ftrace_lines[ts].append(line)
     return line
 
-def convert_uos_line(line):
+def convert_uos_line(line, start_vcpu):
     global start_ftrace
     ts = int(find_timestamp1(line))
 
     line = line.replace(str(ts), '%.6f' % convert_ts(ts))
+    for num in range(0,8):
+        if ' [00{}] '.format(num) in line:
+            line = line.replace(" [00{}] ".format(num),
+                                " [00{}] ".format(num + start_vcpu))
+            break
 
-    if ' [000] ' in line:
-        line = line.replace(" [000] ", " [001] ")
-    elif ' [001] ' in line:
-        line = line.replace(" [001] ", " [002] ")
-    elif ' [002] ' in line:
-        line = line.replace(" [002] ", " [003] ")
-
-    if ' target_cpu=000' in line:
-        line = line.replace(" target_cpu=000", " target_cpu=001")
-    elif ' target_cpu=001' in line:
-        line = line.replace(" target_cpu=001", " target_cpu=002")
-    elif ' target_cpu=002' in line:
-        line = line.replace(" target_cpu=002", " target_cpu=003")
-
+    for num in range(0,8):
+        if ' target_cpu=00{}'.format(num) in line:
+            line = line.replace(" target_cpu=00{}".format(num),
+                                " target_cpu=00{}".format(num + start_vcpu))
+            break
     if "i915_request_execute" in line:
         i915_request_execute(line)
     elif "i915_request_retire" in line:
@@ -503,6 +499,7 @@ def cut_ftrace(trace_file):
     fp = open(trace_file)
     cut_fp = open("cut.ftrace", "w")
     first_record = True
+    vcpu_num = 1 # suppose sos at least has one vcpu, and at most has 8 vcpus.
     while True:
         line = fp.readline()
         if not line:
@@ -510,6 +507,9 @@ def cut_ftrace(trace_file):
         if line.strip() == '':
             continue
         if not line.startswith('#'):
+            for num in range(1,8):
+                if " [00{}] ".format(num) in line:
+                    vcpu_num = num + 1
             line = convert_line(line) # if not start with # go on convert, add to ftrace_lines
 
         if line == None:
@@ -546,7 +546,7 @@ def cut_ftrace(trace_file):
         if line.strip() == '':
             continue
         if not line.startswith('#'):
-            line = convert_uos_line(line)    # add to ftrace_lines list
+            line = convert_uos_line(line, vcpu_num)    # add to ftrace_lines list
 
     od = collections.OrderedDict(sorted(ftrace_lines.items())) # sort with timestamp.
     for k, v in od.items():
@@ -583,10 +583,10 @@ def parse_acrntrace():
     vm_exits = acrn_trace.parse_vmexit(acrntrace_path)
     df = pandas.DataFrame(vm_exits)
     first_ts = df['exit_ts'].min()
-    print('first ts is ' + str(first_ts))
+    #print('first ts is ' + str(first_ts))
     df['dur'] = df['delta'] * 1000000 / tsc_hz
     df['start'] = (df['exit_ts'] - first_ts) * 1000000 / tsc_hz
-    print(df)
+    #print(df)
     for index, row in df.iterrows():
         de = duration_event(row['reason'], '', '%.6f' % row['start'], row['cpu'], PID_NAMES['Acrn'])
         de.dur = '%.6f' % row['dur']
